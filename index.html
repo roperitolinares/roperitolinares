@@ -128,7 +128,7 @@ input[type=range]{padding:0;border:0;background:none;accent-color:var(--brand);m
 
 <div class="ov" id="ovk"><div class="sheet">
   <div class="sh"><h2>Administrar tienda</h2><button class="x" data-close="">×</button></div>
-  <label>Tu clave de administradora</label><input id="kin" type="password" autocomplete="off" placeholder="Clave">
+  <label>Correo</label><input id="kem" type="email" autocomplete="username" placeholder="Tu correo de administradora"><label>Contraseña</label><input id="kin" type="password" autocomplete="current-password" placeholder="Contraseña">
   <button class="btn" id="kok" style="margin-top:12px;padding:13px">Entrar</button>
   <div class="note" id="kmsg"></div>
 </div></div>
@@ -137,7 +137,7 @@ input[type=range]{padding:0;border:0;background:none;accent-color:var(--brand);m
   <div class="sh"><h2>Administrar tienda</h2><button class="x" data-close="">×</button></div>
   <div class="card" style="margin:8px 0">
     <h2 style="font-size:1rem">Nuevo producto</h2>
-    <label>1. Foto de la prenda</label><input id="af" type="file" accept="image/*"><img id="prev" style="display:none;width:90px;height:110px;object-fit:cover;border-radius:12px;margin-top:8px">
+    <label>1. Foto de la prenda (vertical)</label><input id="af" type="file" accept="image/*"><img id="prev" style="display:none;width:90px;height:110px;object-fit:cover;border-radius:12px;margin-top:8px">
     <label>2. Nombre</label><input id="an" placeholder="Ej: Polerón Nike vintage">
     <div class="row2"><div><label>3. Precio (CLP)</label><input id="ap" type="number" inputmode="numeric"></div>
     <div><label>4. Categoría</label><select id="ac"><option>Mujer</option><option>Hombre</option><option>Niña</option><option>Niño</option><option>Promoción</option></select></div></div>
@@ -149,15 +149,16 @@ input[type=range]{padding:0;border:0;background:none;accent-color:var(--brand);m
     <h2 style="font-size:1rem">Datos de la tienda</h2>
     <label>WhatsApp (con código país, ej: 56912345678)</label><input id="sph" inputmode="numeric">
     <div class="row2"><div><label>Costo de envío (CLP)</label><input id="ssh" type="number"></div><div><label>Dirección para retiro</label><input id="sad"></div></div>
-    <label>Tu clave de administradora (para entrar al botón Administrar)</label><input id="spin" placeholder="roperito">
     <label>Prendas que ya tuvieron segunda vida (total hasta hoy)</label><input id="sdn" type="number" inputmode="numeric" placeholder="0">
   </div>
   <div id="alist"></div>
-  <button class="btn" id="pub" style="margin-top:12px;padding:14px">Publicar cambios</button>
-  <button class="btn g" id="dl" style="margin-top:8px;padding:12px">Descargar tienda con mis cambios</button>
-  <div class="note" id="pmsg">Los cambios se ven en la tienda cuando los publicas.</div>
+  <button class="btn g" id="imp2" style="margin-top:12px;padding:12px;display:none">Importar mis prendas anteriores a la base de datos</button>
+  <button class="btn g" id="dl" style="margin-top:8px;padding:12px">Descargar tienda con los datos de la tienda</button>
+  <div class="note" id="pmsg">Las prendas se guardan y se publican solas. Si cambias los <b>Datos de la tienda</b> (WhatsApp, envío, dirección), descarga el archivo y súbelo a GitHub.</div>
+  <button class="btn g" id="lo" style="margin-top:8px;padding:12px">Cerrar sesión</button>
 </div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SRC=document.documentElement.outerHTML;
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)}
@@ -166,6 +167,19 @@ const fmt=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maxi
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let D={phone:'',ship:3500,addr:'',products:[]};
 try{D=JSON.parse($('data').textContent)}catch(e){}
+const LEGACY=(D.products||[]).slice();
+const SB=supabase.createClient('https://ctzsoxecromdiegymyvt.supabase.co','sb_publishable_mvxsRnvqvAY9hbaZBZWw8w_Sx93lV7m');
+const BUCKET='Productos';
+let session=null;
+const mapRow=r=>({id:r.id,name:r.name,price:r.price,cat:r.category,size:r.size||'',img:(r.image_urls&&r.image_urls[0])||'',urls:r.image_urls||[],sold:(r.stock||0)<=0,hidden:!r.is_active,db:true});
+async function loadProducts(){
+  try{
+    const {data,error}=await SB.from('products').select('*').order('created_at',{ascending:false});
+    if(error)throw error;
+    D.products=(data&&data.length)?data.map(mapRow):LEGACY.slice();
+  }catch(e){console.error(e);D.products=LEGACY.slice()}
+  render();alist();
+}
 const KS=['RN','3 meses','6 meses','9 meses','12 meses','18 meses','24 meses','2','4','6','8','10-12','14','16'];
 const SZ={Mujer:['XS','S','M','L','XL','XXL','3XL','Única'],Hombre:['XS','S','M','L','XL','XXL','3XL','Única'],Niña:KS,Niño:KS};SZ.Promoción=[...new Set([...SZ.Mujer,...SZ.Hombre,...KS])];
 const EM={Mujer:'👗',Hombre:'👕',Niña:'👧',Niño:'👦',Promoción:'🏷️'};
@@ -177,7 +191,7 @@ function render(){
   const tabs=['Todo','Mujer','Hombre','Niña','Niño','Promoción'];
   $('tabs').innerHTML=tabs.map(t=>`<button class="${t==cat?'on':''}" onclick="setCat('${t}')">${t}</button>`).join('');
   $('chips').innerHTML=(cat!='Todo'&&cat!='Promoción')?['Todas',...SZ[cat]].map(s=>`<button class="${s==size?'on':''}" onclick="setSize('${s}')">${s=='Todas'?'Todas las tallas':'Talla '+s}</button>`).join(''):'';
-  const l=D.products.filter(p=>!p.sold&&(cat=='Todo'||p.cat==cat)&&((cat=='Todo'||cat=='Promoción')||size=='Todas'||p.size==size));
+  const l=D.products.filter(p=>!p.sold&&!p.hidden&&(cat=='Todo'||p.cat==cat)&&((cat=='Todo'||cat=='Promoción')||size=='Todas'||p.size==size));
   $('grid').innerHTML=l.map(p=>{const inC=cart.includes(p.id);return `<div class="card p"><div class="im"><span class="tag">Talla ${esc(p.size)}</span>${p.img?`<img src="${p.img}" alt="${esc(p.name)}" loading="lazy">`:EM[p.cat]}</div><div class="pb"><div class="pn">${esc(p.name)}</div><div class="pp">${fmt(p.price)}</div><button class="btn ${inC?'g':''}" onclick="toggle('${p.id}')">${inC?'En el carrito ✓':'Agregar al carrito'}</button></div></div>`}).join('');
   $('emp').style.display=l.length?'none':'block';
   $('emp').innerHTML=D.products.length?'No hay prendas en esta categoría por ahora 🌿':'Estamos preparando la colección 🌿<br>Pronto verás nuestras prendas aquí.';
@@ -195,7 +209,7 @@ function setCat(c){cat=c;size='Todas';render()}function setSize(s){size=s;render
 function toggle(id){cart=cart.includes(id)?cart.filter(x=>x!=id):[...cart,id];saveCart();render();if($('ovc').classList.contains('show'))renderCart()}
 
 function renderCart(){
-  cart=cart.filter(id=>D.products.some(p=>p.id==id&&!p.sold));
+  cart=cart.filter(id=>D.products.some(p=>p.id==id&&!p.sold&&!p.hidden));
   const ps=cart.map(id=>D.products.find(p=>p.id==id));
   $('items').innerHTML=ps.length?ps.map(p=>`<div class="ci"><div class="t">${p.img?`<img src="${p.img}">`:EM[p.cat]}</div><div class="m">${esc(p.name)}<br><small>${p.cat} · Talla ${esc(p.size)}</small></div><b>${fmt(p.price)}</b><button class="x" onclick="toggle('${p.id}')">×</button></div>`).join(''):'<div class="empty">Tu carrito está vacío</div>';
   $('co').style.display=ps.length?'block':'none';
@@ -223,49 +237,35 @@ $('ac').onchange=sizes;sizes();
 function alist(){
   $('alist').innerHTML='<h2 style="font-size:1rem">Productos ('+D.products.filter(p=>!p.sold).length+' disponibles)</h2>'+D.products.map(p=>`<div class="ci"><div class="t">${p.img?`<img src="${p.img}">`:EM[p.cat]}</div><div class="m">${esc(p.name)}${p.sold?' <b>(vendido)</b>':''}<br><small>${p.cat} · ${esc(p.size)} · ${fmt(p.price)}</small></div><button class="x" title="${p.sold?'Reactivar':'Marcar vendido'}" onclick="sold('${p.id}')">${p.sold?'↺':'✓'}</button><button class="x" onclick="rm('${p.id}')">🗑</button></div>`).join('');
 }
-const sold=id=>{const p=D.products.find(x=>x.id==id);p.sold=!p.sold;alist();render()};
-const rm=id=>{D.products=D.products.filter(x=>x.id!=id);alist();render()};
-function compress(f){return new Promise(r=>{const i=new Image();i.onload=()=>{const m=520,k=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.7))};i.onerror=()=>r('');i.src=URL.createObjectURL(f)})}
+const sold=async id=>{
+  const p=D.products.find(x=>x.id==id);if(!p)return;
+  if(!p.db){toast('Primero toca "Importar mis prendas anteriores"');return}
+  const {error}=await SB.from('products').update({stock:p.sold?1:0,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){toast('No se pudo actualizar');return}
+  await loadProducts();
+};
+const rm=async id=>{
+  const p=D.products.find(x=>x.id==id);if(!p)return;
+  if(!p.db){toast('Primero toca "Importar mis prendas anteriores"');return}
+  if(!confirm('¿Borrar "'+p.name+'"? No se puede deshacer.'))return;
+  const files=(p.urls||[]).map(u=>decodeURIComponent((u.split('/'+BUCKET+'/')[1]||''))).filter(Boolean);
+  if(files.length)await SB.storage.from(BUCKET).remove(files);
+  const {error}=await SB.from('products').delete().eq('id',id);
+  if(error){toast('No se pudo borrar');return}
+  await loadProducts();
+};
+function compress(f){return new Promise((res,rej)=>{const i=new Image(),u=URL.createObjectURL(f);i.onload=()=>{const m=900,k=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(new Error('No se pudo procesar la foto')),'image/jpeg',.82)};i.onerror=()=>rej(new Error('No se pudo leer la foto'));i.src=u})}
 $('af').onchange=()=>{const f=$('af').files[0];if(f){$('prev').src=URL.createObjectURL(f);$('prev').style.display='block'}};
 $('aadd').onclick=async()=>{
   const n=$('an').value.trim(),pr=parseFloat($('ap').value);if(!n||!pr){toast('Agrega nombre y precio');return}
-  const f=$('af').files[0],img=f?await compress(f):'';
-  D.products.unshift({id:'p'+Date.now(),name:n,price:pr,cat:$('ac').value,size:$('as').value,img});
-  $('an').value='';$('ap').value='';$('af').value='';$('prev').style.display='none';$('amsg').textContent='✓ Producto agregado. Para que lo vean tus clientas, toca Publicar cambios (o Descargar).';alist();render();
-};
-function openAdmin(){$('ovk').classList.remove('show');
-  $('spin').value=D.pin||'roperito';$('sph').value=D.phone;$('ssh').value=D.ship;$('sad').value=D.addr;$('sdn').value=D.done||'';alist();$('ova').classList.add('show')}
-$('adm').onclick=()=>{if(isAdmin)return openAdmin();$('kin').value='';$('kmsg').textContent='';$('ovk').classList.add('show');setTimeout(()=>$('kin').focus(),50)};
-$('kok').onclick=()=>{if($('kin').value.trim()==(D.pin||'roperito')){isAdmin=true;openAdmin()}else $('kmsg').textContent='Clave incorrecta, intenta de nuevo.'};
-$('kin').onkeydown=e=>{if(e.key=='Enter')$('kok').click()};
-$('pub').onclick=async()=>{
-  D.phone=$('sph').value.replace(/\D/g,'');D.ship=parseFloat($('ssh').value)||0;D.addr=$('sad').value.trim();D.done=parseInt($('sdn').value)||0;D.pin=$('spin').value.trim()||'roperito';
-  $('pmsg').textContent='Publicando…';
-  try{const a=await window.claude.use('artifact');
-    const json=JSON.stringify(D).replace(/</g,'\\u003c');
-    const html='<!DOCTYPE html>'+SRC.replace(/(<script type="application\/json" id="data">)[\s\S]*?(<\/script>)/,(m,x,y)=>x+json+y);
-    await a.publish(html);
-  }catch(e){$('pmsg').textContent=e&&e.code=='too_large'?'Muchas fotos pesadas: elimina algunas e intenta de nuevo.':'No se pudo publicar ('+(e&&e.code||'error')+').'}
-};
-function cur(){D.phone=$('sph').value.replace(/\D/g,'')||D.phone;D.ship=parseFloat($('ssh').value)||D.ship;D.addr=$('sad').value.trim()||D.addr;D.done=parseInt($('sdn').value)||D.done||0;D.pin=$('spin').value.trim()||D.pin||'roperito';const json=JSON.stringify(D).replace(/</g,'\\u003c');return '<!DOCTYPE html>'+SRC.replace(/(<script type="application\/json" id="data">)[\s\S]*?(<\/script>)/,(m,x,y)=>x+json+y)}
-$('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([cur()],{type:'text/html'}));a.download='Roperito_Linares_Tienda.html';document.body.appendChild(a);a.click();a.remove();$('pmsg').textContent='Archivo descargado con tus fotos y cambios.'};
-/* Acceso admin: dueña detectada, #admin en la dirección, o tocar el logo 5 veces */
-const showAdm=()=>{$('adm').style.display='block'};
-if(location.hash=='#admin')showAdm();
-addEventListener('hashchange',()=>{if(location.hash=='#admin')showAdm()});
-let lt=0,lc=0;document.querySelector('.logo').onclick=()=>{const n=Date.now();lc=n-lt<1500?lc+1:1;lt=n;if(lc>=5){lc=0;showAdm()}};
-(async()=>{try{const u=await window.claude.use('user');if(u&&await u.isOwner()){isAdmin=true;showAdm()}}catch(e){}})();
-/* Contador de visitas (cuenta 1 vez por sesión; no cuenta pruebas locales) */
-(async()=>{
-  const live=!['file:','http:'].includes(location.protocol)||(location.protocol=='http:'&&!/^(localhost|127\.)/.test(location.hostname));
-  let cnt=0;try{if(sessionStorage.getItem('rl_v'))cnt=1}catch(e){}
-  const apis=[
-    ()=>fetch('https://abacus.jasoncameron.dev/'+(cnt||!live?'get':'hit')+'/roperitolinares.cl/visitas').then(r=>r.json()).then(j=>j.value),
-    ()=>fetch('https://api.counterapi.dev/v1/roperitolinares/visitas/'+(cnt||!live?'':'up')).then(r=>r.json()).then(j=>j.count)
-  ];
-  let ok=0;for(const f of apis){try{const v=await f();if(Number.isFinite(v)){$('vn').textContent=nf(v);ok=1;try{sessionStorage.setItem('rl_v','1')}catch(e){}break}}catch(e){}}
-  if(!ok)$('vn').textContent='—';
-})();
-render();
-</script></body></html>
-</body></html>
+  if(!session){toast('Inicia sesión de nuevo');return}
+  const b=$('aadd');b.disabled=true;$('amsg').textContent='Subiendo prenda…';
+  try{
+    const f=$('af').files[0];let urls=[];
+    if(f){const blob=await compress(f),path=crypto.randomUUID()+'.jpg';
+      const {error}=await SB.storage.from(BUCKET).upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000'});
+      if(error)throw error;
+      urls=[SB.storage.from(BUCKET).getPublicUrl(path).data.publicUrl]}
+    const now=new Date().toISOString();
+    const {error}=await SB.from('products').insert({id:crypto.randomUUID(),name:n,description:'',category:$('ac').value,size:$('as').value,price:Math.round(pr),stock:1,image_urls:urls,is_active:true,created_at:now,updated_at:now});
+    if(e
