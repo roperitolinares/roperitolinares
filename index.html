@@ -227,7 +227,7 @@ $('send').onclick=()=>{
   const {ps,st,sp}=renderCart(),n=$('cname').value.trim(),ph=$('cph').value.trim(),ad=$('caddr').value.trim();
   if(!n||!ph||(mode!='retiro'&&!ad)){toast('Completa tu nombre, teléfono'+(mode!='retiro'?' y dirección':'')+' para enviar el pedido.');return}
   if(!D.phone){toast('La tienda aún no configura su WhatsApp.');return}
-  const t='Hola Roperito Linares 🌿 Quiero hacer este pedido:\n\n'+ps.map(p=>`• ${p.name} (${p.cat}, talla ${p.size}) – ${fmt(p.price)}`).join('\n')+`\n\nSubtotal: ${fmt(st)}\n${mode=='delivery'?'Delivery en Linares (radio urbano): '+fmt(sp)+'\nDirección: '+ad:mode=='pagar'?'Envío por pagar (Starken / Blue Express): el costo lo pago al recibir\nDirección: '+ad:'Retiro en tienda'}\nTotal: ${fmt(st+sp)}\n\nNombre: ${n}\nTeléfono: ${ph}`;
+  const t='Hola Roperito Linares 🌿 Quiero hacer este pedido:\n\n'+ps.map(p=>`• ${p.name} (${p.cat}, talla ${p.size}) – ${fmt(p.price)}${p.img&&/^https?:/.test(p.img)?'\n'+p.img:''}`).join('\n')+`\n\nSubtotal: ${fmt(st)}\n${mode=='delivery'?'Delivery en Linares (radio urbano): '+fmt(sp)+'\nDirección: '+ad:mode=='pagar'?'Envío por pagar (Starken / Blue Express): el costo lo pago al recibir\nDirección: '+ad:'Retiro en tienda'}\nTotal: ${fmt(st+sp)}\n\nNombre: ${n}\nTeléfono: ${ph}`;
   const a=document.createElement('a');a.href='https://wa.me/'+D.phone.replace(/\D/g,'')+'?text='+encodeURIComponent(t);a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();
 };
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.ov').classList.remove('show'));
