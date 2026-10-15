@@ -100,6 +100,7 @@ input[type=range]{padding:0;border:0;background:none;accent-color:var(--brand);m
       <a href="https://www.instagram.com/roperitolinares" target="_blank" rel="noopener">Instagram</a>
       <a href="https://www.tiktok.com/@roperitolinares" target="_blank" rel="noopener">TikTok</a>
     </div>
+    <div class="pl"><a href="https://search.google.com/local/writereview?placeid=ChIJZUKAc2X1ZZYRnCD8SWdm3BM" target="_blank" rel="noopener" style="background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600">⭐ Déjanos tu reseña en Google</a></div>
     <div class="pl"><a href="https://wa.me/56930322299" target="_blank" rel="noopener">WhatsApp +56 9 3032 2299</a></div>
   </div>
 </section>
@@ -168,12 +169,13 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 let D={phone:'',ship:3500,addr:'',products:[]};
 try{D=JSON.parse($('data').textContent)}catch(e){}
 const LEGACY=(D.products||[]).slice();
-const SB=supabase.createClient('https://ctzsoxecromdiegymyvt.supabase.co','sb_publishable_mvxsRnvqvAY9hbaZBZWw8w_Sx93lV7m');
+const SB=(typeof supabase!=='undefined')?supabase.createClient('https://ctzsoxecromdiegymyvt.supabase.co','sb_publishable_mvxsRnvqvAY9hbaZBZWw8w_Sx93lV7m'):null;
 const BUCKET='Productos';
 let session=null;
 const mapRow=r=>({id:r.id,name:r.name,price:r.price,cat:r.category,size:r.size||'',img:(r.image_urls&&r.image_urls[0])||'',urls:r.image_urls||[],sold:(r.stock||0)<=0,hidden:!r.is_active,db:true});
 async function loadProducts(){
   try{
+    if(!SB)throw new Error('sin conexión');
     const {data,error}=await SB.from('products').select('*').order('created_at',{ascending:false});
     if(error)throw error;
     D.products=(data&&data.length)?data.map(mapRow):LEGACY.slice();
@@ -268,4 +270,70 @@ $('aadd').onclick=async()=>{
       urls=[SB.storage.from(BUCKET).getPublicUrl(path).data.publicUrl]}
     const now=new Date().toISOString();
     const {error}=await SB.from('products').insert({id:crypto.randomUUID(),name:n,description:'',category:$('ac').value,size:$('as').value,price:Math.round(pr),stock:1,image_urls:urls,is_active:true,created_at:now,updated_at:now});
-    if(e
+    if(error)throw error;
+    $('an').value='';$('ap').value='';$('af').value='';$('prev').style.display='none';
+    $('amsg').textContent='✓ Producto agregado. Ya está visible en la tienda.';
+    await loadProducts();
+  }catch(e){console.error(e);$('amsg').textContent='Error: '+(e.message||'no se pudo guardar')}
+  b.disabled=false;
+};
+function openAdmin(){$('ovk').classList.remove('show');
+  $('imp2').style.display=LEGACY.length?'block':'none';$('sph').value=D.phone;$('ssh').value=D.ship;$('sad').value=D.addr;$('sdn').value=D.done||'';alist();$('ova').classList.add('show')}
+$('adm').onclick=()=>{if(isAdmin)return openAdmin();$('kin').value='';$('kmsg').textContent='';$('ovk').classList.add('show');setTimeout(()=>$('kem').focus(),50)};
+$('kok').onclick=async()=>{
+  $('kmsg').textContent='Entrando…';
+  if(!SB){$('kmsg').textContent='Sin conexión con la base de datos. Recarga la página.';return}
+  const {data,error}=await SB.auth.signInWithPassword({email:$('kem').value.trim(),password:$('kin').value});
+  if(error){$('kmsg').textContent='Correo o contraseña incorrectos, intenta de nuevo.';return}
+  session=data.session;isAdmin=true;$('kin').value='';$('kmsg').textContent='';
+  await loadProducts();openAdmin();
+};
+$('kin').onkeydown=e=>{if(e.key=='Enter')$('kok').click()};
+$('imp2').onclick=async()=>{
+  if(!session){toast('Inicia sesión de nuevo');return}
+  const have=new Set(D.products.filter(p=>p.db).map(p=>p.name+'|'+p.price));
+  const todo=LEGACY.filter(p=>!have.has(p.name+'|'+p.price));
+  if(!todo.length){toast('Tus prendas anteriores ya están importadas');return}
+  let ok=0;$('imp2').disabled=true;
+  for(const p of todo){
+    $('pmsg').textContent='Importando '+(ok+1)+' de '+todo.length+'…';
+    try{
+      let urls=[];
+      if(p.img){const blob=await (await fetch(p.img)).blob(),path=crypto.randomUUID()+'.jpg';
+        const {error}=await SB.storage.from(BUCKET).upload(path,blob,{contentType:blob.type||'image/jpeg',cacheControl:'31536000'});
+        if(error)throw error;urls=[SB.storage.from(BUCKET).getPublicUrl(path).data.publicUrl]}
+      const now=new Date().toISOString();
+      const {error}=await SB.from('products').insert({id:crypto.randomUUID(),name:p.name,description:'',category:p.cat,size:p.size||'',price:Math.round(p.price),stock:p.sold?0:1,image_urls:urls,is_active:true,created_at:now,updated_at:now});
+      if(error)throw error;ok++;
+    }catch(e){console.error(e)}
+  }
+  $('imp2').disabled=false;$('pmsg').textContent='✓ Importadas '+ok+' de '+todo.length+' prendas.';
+  await loadProducts();
+};
+$('lo').onclick=async()=>{await SB.auth.signOut();session=null;isAdmin=false;$('ova').classList.remove('show');loadProducts();toast('Sesión cerrada')};
+function cur(){D.phone=$('sph').value.replace(/\D/g,'')||D.phone;D.ship=parseFloat($('ssh').value)||D.ship;D.addr=$('sad').value.trim()||D.addr;D.done=parseInt($('sdn').value)||D.done||0;const O={phone:D.phone,ship:D.ship,addr:D.addr,done:D.done,products:LEGACY};const json=JSON.stringify(O).replace(/</g,'\\u003c');return '<!DOCTYPE html>'+SRC.replace(/(<script type="application\/json" id="data">)[\s\S]*?(<\/script>)/,(m,x,y)=>x+json+y)}
+$('dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([cur()],{type:'text/html'}));a.download='Roperito_Linares_Tienda.html';document.body.appendChild(a);a.click();a.remove();$('pmsg').textContent='Archivo descargado con tus fotos y cambios.'};
+/* Acceso admin: dueña detectada, #admin en la dirección, o tocar el logo 5 veces */
+const showAdm=()=>{$('adm').style.display='block';$('adm').click()};
+if(location.hash=='#admin')showAdm();
+addEventListener('hashchange',()=>{if(location.hash=='#admin')showAdm()});
+let lt=0,lc=0;document.querySelector('.logo').onclick=()=>{const n=Date.now();lc=n-lt<1500?lc+1:1;lt=n;if(lc>=5){lc=0;showAdm()}};
+SB&&SB.auth.getSession().then(({data})=>{if(data&&data.session){session=data.session;isAdmin=true}}).catch(()=>{});
+/* Contador de visitas: Supabase (cuenta 1 vez por sesión; no cuenta pruebas locales) */
+(async()=>{
+  const live=!['file:'].includes(location.protocol)&&!/^(localhost|127\.)/.test(location.hostname);
+  let seen=0;try{if(sessionStorage.getItem('rl_v'))seen=1}catch(e){}
+  const done=v=>{$('vn').textContent=nf(v);try{sessionStorage.setItem('rl_v','1')}catch(e){}};
+  try{
+    if(!SB)throw 0;
+    const {data,error}=await SB.rpc((seen||!live)?'get_visits':'register_visit');
+    if(error)throw error;
+    if(Number.isFinite(Number(data))){done(Number(data));return}
+  }catch(e){}
+  try{const r=await fetch('https://abacus.jasoncameron.dev/get/roperitolinares.cl/visitas').then(r=>r.json());if(Number.isFinite(r.value)){done(r.value);return}}catch(e){}
+  $('vn').textContent='—';
+})();
+render();
+loadProducts();
+</script></body></html>
+</body></html>
