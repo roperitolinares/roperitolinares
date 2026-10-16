@@ -61,7 +61,9 @@ h2{font-family:'Playfair Display',serif;font-size:1.1rem;margin:0 0 10px}
 textarea{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--bd);background:var(--inp);color:var(--text);font:400 .92rem Inter;outline:none;resize:vertical}
 textarea:focus{border-color:var(--brand)}
 .tb{display:flex;gap:8px;margin:0 0 10px}.tb input{flex:1;min-width:0}.tb select{width:auto;max-width:46%}
-.nw{position:absolute;right:8px;top:8px;background:var(--brand);color:#fff;border-radius:99px;padding:3px 9px;font-size:.66rem;font-weight:600;z-index:1;white-space:nowrap}
+.pr{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sz{background:rgba(72,201,176,.16);color:var(--brand-d);border-radius:99px;padding:2px 9px;font-size:.72rem;font-weight:600;white-space:nowrap}
+.nw{align-self:flex-start;background:var(--brand);color:#fff;border-radius:99px;padding:2px 9px;font-size:.68rem;font-weight:600;margin:2px 0 4px}
 .vend{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:rgba(255,255,255,.4);pointer-events:none}
 .vend span{background:var(--text);color:var(--sheet);font:600 .78rem Inter;letter-spacing:.12em;padding:6px 16px;border-radius:99px;transform:rotate(-8deg)}
 .p.sd .im img{filter:grayscale(1)}.p.sd .pp{text-decoration:line-through;opacity:.6}
@@ -178,7 +180,7 @@ input[type=range]{padding:0;border:0;background:none;accent-color:var(--brand);m
   <svg viewBox="0 0 64 64" fill="none" stroke="var(--brand-d)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 22v-4c0-1 6-2 6-7a6 6 0 0 0-12 0"/><path d="M32 22 8 44c-3 3-1 3 2 3h44c3 0 5 0 2-3z"/><path d="M32 44c-8.500-5-8.500-11-4-11 2 0 4 1.500 4 3 0-1.500 2-3 4-3 4.500 0 4.500 6-4 11z" fill="var(--brand)" stroke="var(--brand-d)" stroke-width="1.6"/></svg>
   <span><b id="vn">…</b> visitas</span>
 </div>
-<div class="note" style="text-align:center;opacity:.6;margin:6px 0 0">Versión 7 · 16 oct 2026</div>
+<div class="note" style="text-align:center;opacity:.6;margin:6px 0 0">Versión 8 · 16 oct 2026</div>
 </div>
 
 <div class="ov" id="ovc"><div class="sheet">
@@ -321,7 +323,7 @@ function render(){
   const l=D.products.filter(p=>!p.hidden&&(!p.sold||recentSold(p))&&(cat=='Todo'||p.cat==cat)&&((cat=='Todo'||cat=='Promoción')||size=='Todas'||p.size==size)&&(!words.length||(h=>words.every(w=>h.includes(w)))(norm([p.name,p.cat,p.size,p.est,p.desc].join(' ')))));
   const tm=p=>new Date(p.created||0).getTime();
   l.sort((a,b)=>(a.sold-b.sold)||(so=='lo'?a.price-b.price:so=='hi'?b.price-a.price:tm(b)-tm(a)));
-  $('grid').innerHTML=l.map(p=>{const inC=cart.includes(p.id),sd=p.sold;return `<div class="card p${sd?' sd':''}"><div class="im" onclick="openFicha('${p.id}')"><span class="tag">Talla ${esc(p.size)}</span>${isNew(p)&&!sd?'<span class="nw">Recién llegada</span>':''}${gal(p)}${sd?'<div class="vend"><span>VENDIDA</span></div>':''}</div><div class="pb"><div class="pn" onclick="openFicha('${p.id}')">${esc(p.name)}</div><div class="pp">${fmt(p.price)}</div>${sd?'<button class="btn g" disabled>Vendida</button>':`<button class="btn ${inC?'g':''}" onclick="toggle('${p.id}')">${inC?'En el carrito ✓':'Agregar al carrito'}</button>`}</div></div>`}).join('');
+  $('grid').innerHTML=l.map(p=>{const inC=cart.includes(p.id),sd=p.sold;return `<div class="card p${sd?' sd':''}"><div class="im" onclick="openFicha('${p.id}')">${gal(p)}${sd?'<div class="vend"><span>VENDIDA</span></div>':''}</div><div class="pb"><div class="pn" onclick="openFicha('${p.id}')">${esc(p.name)}</div><div class="pr"><span class="pp">${fmt(p.price)}</span><span class="sz">Talla ${esc(p.size)}</span></div>${isNew(p)&&!sd?'<span class="nw">Recién llegada</span>':''}${sd?'<button class="btn g" disabled>Vendida</button>':`<button class="btn ${inC?'g':''}" onclick="toggle('${p.id}')">${inC?'En el carrito ✓':'Agregar al carrito'}</button>`}</div></div>`}).join('');
   $('emp').style.display=l.length?'none':'block';
   $('emp').innerHTML=D.loading?'Cargando prendas…':D.loadErr?'No pudimos cargar las prendas. Revisa tu conexión e inténtalo de nuevo.<br><button class="btn" style="max-width:220px;margin:12px auto 0" onclick="loadProducts()">Reintentar</button>':qv?'No encontramos prendas con esa búsqueda. Prueba con otra palabra 🌿':D.products.length?'No hay prendas en esta categoría por ahora 🌿':'Estamos preparando la colección 🌿<br>Pronto verás nuestras prendas aquí.';
   $('cn').textContent=cart.length;syncSlider();
