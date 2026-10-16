@@ -293,7 +293,7 @@ async function loadProducts(){
   await sp;D.loading=false;applyInfo();
   render();alist();if(!hd){hd=1;openFromHash()}
 }
-const KS=['RN','3 meses','6 meses','9 meses','12 meses','18 meses','24 meses','2','4','6','8','10-12','14','16'];
+const KS=['RN','3 meses','6 meses','9 meses','12 meses','18 meses','24 meses','2','3','4','6','8','10-12','14','16'];
 const SZ={Mujer:['XS','S','M','L','XL','XXL','3XL','Única'],Hombre:['XS','S','M','L','XL','XXL','3XL','Única'],Niña:KS,Niño:KS};SZ.Promoción=[...new Set([...SZ.Mujer,...SZ.Hombre,...KS])];
 const EM={Mujer:'👗',Hombre:'👕',Niña:'👧',Niño:'👦',Promoción:'🏷️'};
 let cart=[];try{cart=JSON.parse(localStorage.getItem('rl_cart')||'[]')}catch(e){}
